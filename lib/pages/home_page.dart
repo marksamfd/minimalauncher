@@ -11,6 +11,7 @@ import 'package:interactive_slider/interactive_slider.dart';
 import 'package:intl/intl.dart';
 import 'package:minimalauncher/pages/right_screen.dart';
 import 'package:minimalauncher/pages/widgets/app_drawer.dart';
+import 'package:minimalauncher/pages/helpers/calendar_helper.dart';
 import 'package:minimalauncher/variables/strings.dart';
 // import 'package:notification_listener/notification_listener.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +39,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   List<Application> favoriteApps = [];
   List<Event> _eventsToShowOnHome = [];
+  final CalendarHelper _calendarHelper = CalendarHelper();
 
   Timer? _pollingTimer;
   // final Set<String> _activeNotifications = {};
@@ -104,16 +106,22 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadHomeScreenEvents() async {
     final prefs = await SharedPreferences.getInstance();
+    final bool isCalendarEnabled = prefs.getBool(prefsIsCalendarEnabled) ?? false;
+    
     final eventList = prefs.getStringList('events') ?? [];
-
-    // Filter events marked for home screen
-    final allEvents =
+    List<Event> allEvents =
         eventList.map((e) => Event.fromJson(json.decode(e))).toList();
+
+    if (isCalendarEnabled) {
+      final calendarEvents = await _calendarHelper.fetchCalendarEvents();
+      allEvents.addAll(calendarEvents);
+    }
 
     setState(() {
       _eventsToShowOnHome = allEvents
           .where((event) => event.showOnHomeScreen && !event.isCompleted)
           .toList();
+      _eventsToShowOnHome.sort((a, b) => a.deadline.compareTo(b.deadline));
     });
   }
 

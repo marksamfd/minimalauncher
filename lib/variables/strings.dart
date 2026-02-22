@@ -12,6 +12,7 @@ const String prefsWeatherApiKey = 'weatherapi';
 const String prefsWeatherTemp = 'tempr';
 const String prefsWeatherLocation = 'areaname';
 const String prefsWeatherDesc = 'weather';
+const String prefsIsCalendarEnabled = 'isCalendarEnabled';
 
 const String homeStatsSeperator = '   /   ';
 

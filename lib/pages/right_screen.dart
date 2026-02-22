@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:minimalauncher/variables/strings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:minimalauncher/pages/widgets/calendar_view.dart';
+import 'package:minimalauncher/pages/helpers/calendar_helper.dart';
 import 'dart:convert';
 
 class Event {
@@ -45,6 +46,11 @@ class RightScreen extends StatefulWidget {
 
 class _RightScreenState extends State<RightScreen> {
   List<Event> _events = [];
+  List<Event> _manualEvents = [];
+  List<Event> _calendarEvents = [];
+  bool _isCalendarEnabled = false;
+  final CalendarHelper _calendarHelper = CalendarHelper();
+
   Color selectedColor = Colors.transparent;
   Color textColor = Colors.transparent;
 
@@ -72,21 +78,38 @@ class _RightScreenState extends State<RightScreen> {
 
   Future<void> _loadEvents() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    _isCalendarEnabled = prefs.getBool(prefsIsCalendarEnabled) ?? false;
+    
     final eventList = prefs.getStringList('events') ?? [];
+    _manualEvents = eventList.map((e) => Event.fromJson(json.decode(e))).toList();
+    
+    if (_isCalendarEnabled) {
+      _calendarEvents = await _calendarHelper.fetchCalendarEvents();
+    } else {
+      _calendarEvents = [];
+    }
+
     setState(() {
-      _events = eventList.map((e) => Event.fromJson(json.decode(e))).toList();
+      _events = [..._manualEvents, ..._calendarEvents];
+      _events.sort((a, b) => a.deadline.compareTo(b.deadline));
     });
   }
 
   Future<void> _saveEvents() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Sort events by deadline (ascending), so closest deadlines come first
-    _events.sort((a, b) => a.deadline.compareTo(b.deadline));
+    // Sort manual events by deadline (ascending)
+    _manualEvents.sort((a, b) => a.deadline.compareTo(b.deadline));
 
-    // Convert sorted events to JSON and save to SharedPreferences
-    final eventList = _events.map((e) => json.encode(e.toJson())).toList();
+    // Convert only manual events to JSON and save to SharedPreferences
+    final eventList = _manualEvents.map((e) => json.encode(e.toJson())).toList();
     prefs.setStringList('events', eventList);
+    
+    setState(() {
+      _events = [..._manualEvents, ..._calendarEvents];
+      _events.sort((a, b) => a.deadline.compareTo(b.deadline));
+    });
   }
 
   void _scheduleAlarm(Event event) async {
@@ -117,7 +140,7 @@ class _RightScreenState extends State<RightScreen> {
 
   void _addEvent(Event event) {
     setState(() {
-      _events.add(event);
+      _manualEvents.add(event);
     });
     _scheduleAlarm(event);
     _saveEvents();
@@ -125,7 +148,9 @@ class _RightScreenState extends State<RightScreen> {
 
   void _deleteEvent(Event event) {
     setState(() {
-      _events.remove(event);
+      _manualEvents.remove(event);
+      _calendarEvents.remove(event); // In case it's a calendar event we want to hide? 
+      // Note: we can't really delete from device calendar yet with this simple helper
     });
     _cancelAlarm(event);
     _saveEvents();

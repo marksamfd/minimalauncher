@@ -16,6 +16,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool is24HourFormat = false;
   Color selectedColor = Colors.white; // Background color
   Color textColor = Colors.black; // Text color
+  bool isCalendarEnabled = false;
   bool preferencesChanged = false;
 
   @override
@@ -31,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       showWallpaper = prefs.getBool(prefsShowWallpaper) ?? false;
       is24HourFormat = prefs.getBool(prefsIs24HourFormat) ?? false;
+      isCalendarEnabled = prefs.getBool(prefsIsCalendarEnabled) ?? false;
       int? colorValue = prefs.getInt(prefsSelectedColor);
       int? textColorValue = prefs.getInt(prefsTextColor);
       if (colorValue != null) {
@@ -47,6 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool(prefsShowWallpaper, showWallpaper);
     prefs.setBool(prefsIs24HourFormat, is24HourFormat);
+    prefs.setBool(prefsIsCalendarEnabled, isCalendarEnabled);
     prefs.setInt(prefsSelectedColor, selectedColor.value);
     prefs.setInt(prefsTextColor, textColor.value);
     preferencesChanged = true;
@@ -178,6 +181,26 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
+              ),
+                ),
+              ),
+              Divider(),
+              SwitchListTile(
+                title: Text(
+                  'Load Calendar Events',
+                  style: TextStyle(
+                    color: textColor,
+                    fontFamily: fontNormal,
+                  ),
+                ),
+                value: isCalendarEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    isCalendarEnabled = value;
+                    preferencesChanged = true;
+                  });
+                  _savePreferences();
+                },
               ),
               Divider(),
             ],
